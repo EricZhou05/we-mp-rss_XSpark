@@ -1,15 +1,39 @@
-__pycache__
-*.xml
-config.yaml
+# Python bytecode and temporary files
+__pycache__/
 *.pyc
-dock_build.bat
-./db.db
-.vscode/launch.json
 *.log
-item
-static/cache
-static/wx_qrcode.png
-data
-build
-dist
-data1
+
+# IDE specific files
+.idea/             # PyCharm specific
+*.iml              # PyCharm specific
+*.ipr              # PyCharm specific
+*.iws              # PyCharm specific
+.vscode/           # VS Code specific (ignores entire .vscode directory)
+#.vscode/launch.json # If you only want to ignore launch.json, uncomment this and comment out .vscode/ above
+
+# Environment files
+venv/              # Virtual environment directory (common name)
+env/               # Another common virtual environment name
+.env               # Environment variable files
+
+# Config files (local overrides)
+config.yaml        # Local configuration file (example.yaml should be versioned)
+
+# Database files
+*.db               # Generic database files
+*.sqlite3          # SQLite database files (e.g., db.db)
+
+# Build artifacts and temporary directories
+build/
+dist/
+dock_build.bat     # Windows batch script for Docker build
+
+# Runtime generated data/cache
+data/
+data1/
+item/              # Assuming 'item' is a directory for temporary data or output
+static/cache/      # Static files cache
+static/wx_qrcode.png # Assuming this is a generated or temporary file. If it's a project asset, remove this line.
+
+# Misc (handle with care)
+*.xml              # Be careful with this. Only ignore if they are build-generated or temporary.
