@@ -53,3 +53,5 @@ reportlab
 apscheduler 
 psutil
 chardet
+python-docx
+pytz
