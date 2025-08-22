@@ -64,6 +64,24 @@
                 <template #icon><icon-scan /></template>
                 刷新授权
               </a-button>
+
+              <!-- [新增] 导出选题下拉按钮 -->
+              <a-dropdown>
+                <a-button type="primary" :loading="exportLoading">
+                  <template #icon>
+                    <icon-download />
+                  </template>
+                  导出选题
+                  <icon-down />
+                </a-button>
+                <template #content>
+                  <a-doption v-for="item in dateRangeOptions" :key="item.value" @click="handleExport(item.value)">
+                    {{ item.label }}
+                  </a-doption>
+                </template>
+              </a-dropdown>
+
+              <!-- 原有的订阅按钮 -->
               <a-dropdown>
                 <a-button>
                   <template #icon>
@@ -145,7 +163,7 @@
               <a-button type="primary" @click="handleRefresh">确定</a-button>
             </template>
           </a-modal>
-          <a-modal id="article-model" v-model:visible="articleModalVisible" 
+          <a-modal id="article-model" v-model:visible="articleModalVisible"
             placement="left" :footer="false" :fullscreen="false" @before-close="resetScrollPosition">
             <h2 id="topreader">{{ currentArticle.title }}</h2>
             <div style="margin-top: 20px; color: var(--color-text-3); text-align: left">
@@ -172,9 +190,9 @@ import { Avatar } from '@/utils/constants'
 import { translatePage, setCurrentLanguage } from '@/utils/translate';
 import { ref, onMounted, h } from 'vue'
 import axios from 'axios'
-import { IconApps, IconAtt, IconDelete, IconEdit, IconEye, IconRefresh, IconScan, IconWeiboCircleFill, IconWifi, IconCode } from '@arco-design/web-vue/es/icon'
+import { IconApps, IconAtt, IconDelete, IconEdit, IconEye, IconRefresh, IconScan, IconWeiboCircleFill, IconWifi, IconCode, IconDownload } from '@arco-design/web-vue/es/icon' // [新增] IconDownload
 import { getArticles, deleteArticle as deleteArticleApi, ClearArticle, ClearDuplicateArticle, getArticleDetail } from '@/api/article'
-import { ExportOPML, ExportMPS, ImportMPS } from '@/api/export'
+import { ExportOPML, ExportMPS, ImportMPS, exportArticlesAsDocx } from '@/api/export' // [修改] 导入新函数
 import { getSubscriptions, UpdateMps } from '@/api/subscription'
 import { inject } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
@@ -182,6 +200,7 @@ import { formatDateTime, formatTimestamp } from '@/utils/date'
 import router from '@/router'
 import { deleteMpApi } from '@/api/subscription'
 import TextIcon from '@/components/TextIcon.vue'
+import dayjs from 'dayjs' // [新增] 导入 dayjs
 
 const articles = ref([])
 const loading = ref(false)
@@ -210,6 +229,17 @@ const pagination = ref({
   showPageSize: true,
   pageSizeOptions: [10]
 })
+
+// [新增] 导出功能相关状态
+const exportLoading = ref(false);
+
+// [新增] 导出选项
+const dateRangeOptions = [
+  { label: '今天', value: 'today' },
+  { label: '昨天至今', value: 'yesterday_today' },
+  { label: '前天至今', value: 'day_before_yesterday_today' },
+  { label: '大前天至今', value: 'three_days_ago_today' },
+];
 
 const statusTextMap = {
   published: '已发布',
@@ -388,7 +418,7 @@ const importMPS = async () => {
     input.type = 'file';
     input.accept = '.csv';
     input.onchange = async (e) => {
-      const file = e.target.files[0];
+      const file = (e.target as HTMLInputElement).files[0];
       if (!file) return;
       const formData = new FormData();
       formData.append('file', file);
@@ -418,6 +448,90 @@ const openRssFeed = () => {
     window.open(`/feed${search}/${activeMpId.value}.${format}`, '_blank')
   }
 }
+
+// [新增] 导出选题的核心函数
+const handleExport = async (dateRangeValue: string) => {
+  const feedId = activeMpId.value || 'all';
+
+  const now = dayjs();
+  let startDate: dayjs.Dayjs;
+  const endDate = now;
+
+  switch (dateRangeValue) {
+    case 'today':
+      startDate = now.startOf('day');
+      break;
+    case 'yesterday_today':
+      startDate = now.subtract(1, 'day').startOf('day');
+      break;
+    case 'day_before_yesterday_today':
+      startDate = now.subtract(2, 'day').startOf('day');
+      break;
+    case 'three_days_ago_today':
+      startDate = now.subtract(3, 'day').startOf('day');
+      break;
+    default:
+      Message.error('无效的时间范围');
+      return;
+  }
+
+  const params = {
+    start_date: startDate.format('YYYY-MM-DD HH:mm:ss'),
+    end_date: endDate.format('YYYY-MM-DD HH:mm:ss'),
+  };
+
+  exportLoading.value = true;
+  Message.info('正在生成导出文件，请稍候...');
+
+  try {
+    const res = await exportArticlesAsDocx(feedId, params);
+
+    const contentDisposition = res.headers['content-disposition'];
+    let filename = 'export.docx';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)/);
+      if (filenameMatch && filenameMatch.length > 1) {
+        filename = decodeURIComponent(filenameMatch[1]);
+      } else {
+        const fallbackMatch = contentDisposition.match(/filename="(.+)"/);
+        if(fallbackMatch && fallbackMatch.length > 1) {
+          filename = fallbackMatch[1];
+        }
+      }
+    }
+
+    const blob = new Blob([res.data], { type: res.headers['content-type'] });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+  } catch (err: any) {
+    if (err.response && err.response.status === 404) {
+      const reader = new FileReader();
+      reader.onload = function() {
+        try {
+          const errorData = JSON.parse(reader.result as string);
+          Message.warning(errorData.message || '在该时间段内没有可导出的文章');
+        } catch(e) {
+          Message.warning('在该时间段内没有可导出的文章');
+        }
+      }
+      reader.readAsText(err.response.data);
+    } else {
+      console.error('导出失败:', err);
+      Message.error('导出失败，请检查网络或联系管理员');
+    }
+  } finally {
+    exportLoading.value = false;
+  }
+};
+
 
 const resetScrollPosition = () => {
   window.scrollTo({
@@ -515,6 +629,7 @@ const viewArticle = async (record: any,action_type: number) => {
   }
 }
 const currentArticle = ref({
+  id: '',
   title: '',
   content: '',
   time: '',
