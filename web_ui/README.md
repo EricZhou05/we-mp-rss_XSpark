@@ -26,6 +26,11 @@ npm install
 ```powershell
 npm install --save @arco-design/web-vue @arco-design/web-vue-icon @arco-design/color
 ```
+修正
+```powershell
+npm install --save @arco-design/web-vue @arco-design/color
+```
+
 5. 安装开发依赖：
 ```powershell
 npm install --save-dev less less-loader
