@@ -65,22 +65,6 @@
                 刷新授权
               </a-button>
 
-              <!-- [新增] 导出选题下拉按钮 -->
-              <a-dropdown>
-                <a-button type="primary" :loading="exportLoading">
-                  <template #icon>
-                    <icon-download />
-                  </template>
-                  导出选题
-                  <icon-down />
-                </a-button>
-                <template #content>
-                  <a-doption v-for="item in dateRangeOptions" :key="item.value" @click="handleExport(item.value)">
-                    {{ item.label }}
-                  </a-doption>
-                </template>
-              </a-dropdown>
-
               <!-- 原有的订阅按钮 -->
               <a-dropdown>
                 <a-button>
@@ -108,6 +92,23 @@
                     </template>Text</a-doption>
                 </template>
               </a-dropdown>
+
+              <!-- [新增] 导出选题下拉按钮 -->
+              <a-dropdown>
+                <a-button type="primary" :loading="exportLoading">
+                  <template #icon>
+                    <icon-download />
+                  </template>
+                  导出选题
+                  <icon-down />
+                </a-button>
+                <template #content>
+                  <a-doption v-for="item in dateRangeOptions" :key="item.value" @click="handleExport(item.value)">
+                    {{ item.label }}
+                  </a-doption>
+                </template>
+              </a-dropdown>
+
               <a-button type="primary" status="danger" @click="handleBatchDelete" :disabled="!selectedRowKeys.length">
                 <template #icon><icon-delete /></template>
                 批量删除
