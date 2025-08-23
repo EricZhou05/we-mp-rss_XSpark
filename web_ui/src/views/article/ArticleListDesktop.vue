@@ -270,7 +270,7 @@ const columns = [
   {
     title: '公众号',
     dataIndex: 'mp_id',
-    width: '120',
+    width: '150',
     ellipsis: true,
     render: ({ record }) => {
       const mp = mpList.value.find(item => item.id === record.mp_id);
