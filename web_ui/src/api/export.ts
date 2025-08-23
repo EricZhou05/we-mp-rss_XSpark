@@ -37,7 +37,7 @@ interface ExportDocxParams {
 export const exportArticlesAsDocx = (feedId: string, params: ExportDocxParams) => {
   // 注意：这里的 http.get 返回的是一个 Promise<AxiosResponse<Blob>>
   // 我们直接将整个响应返回，以便在组件中可以访问 headers
-  return http.get(`/exporter/docx/${feedId}`, {
+  return http.get(`/wx/exporter/docx/${feedId}`, {
     params,
     responseType: 'blob', // 关键配置：告诉http客户端期望接收二进制文件数据
   });

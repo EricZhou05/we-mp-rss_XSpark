@@ -494,7 +494,7 @@ const handleExport = async (dateRangeValue: string) => {
         filename = decodeURIComponent(filenameMatch[1]);
       } else {
         const fallbackMatch = contentDisposition.match(/filename="(.+)"/);
-        if(fallbackMatch && fallbackMatch.length > 1) {
+        if (fallbackMatch && fallbackMatch.length > 1) {
           filename = fallbackMatch[1];
         }
       }
@@ -510,22 +510,19 @@ const handleExport = async (dateRangeValue: string) => {
 
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+    Message.success('文件导出成功！');
 
   } catch (err: any) {
+    // [修改] 简化404和其他错误的处理逻辑
     if (err.response && err.response.status === 404) {
-      const reader = new FileReader();
-      reader.onload = function() {
-        try {
-          const errorData = JSON.parse(reader.result as string);
-          Message.warning(errorData.message || '在该时间段内没有可导出的文章');
-        } catch(e) {
-          Message.warning('在该时间段内没有可导出的文章');
-        }
-      }
-      reader.readAsText(err.response.data);
+      // Axios 会自动解析JSON，无需FileReader
+      // 后端返回的结构是 { detail: { message: "..." } }
+      const errorMessage = err.response.data?.detail?.message || '在该时间段内没有可导出的文章';
+      Message.warning(errorMessage);
     } else {
-      console.error('导出失败:', err);
-      Message.error('导出失败，请检查网络或联系管理员');
+      console.error('导出过程中发生错误:', err);
+      // 其他错误（网络问题、服务器500等）
+      Message.error('导出失败，请检查网络连接或联系管理员');
     }
   } finally {
     exportLoading.value = false;
