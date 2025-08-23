@@ -227,7 +227,7 @@ class Db:
         try:
             yield session
         finally:
-            session.remove()
+            self.Session.remove()
 
 # 全局数据库实例
 DB = Db(User_In_Thread=True)
