@@ -1,6 +1,7 @@
 import io
 import datetime
 import pytz
+import zipfile  # 引入zipfile库
 from urllib.parse import quote
 
 import docx
@@ -25,20 +26,47 @@ utc_tz = pytz.utc
 
 # --- 辅助函数 ---
 
+# --- 新增函数：从DOCX文件中移除缩略图 ---
+def remove_thumbnail_from_docx(docx_stream):
+    """
+    将DOCX文件流作为ZIP包处理，移除其中的缩略图文件。
+
+    Args:
+        docx_stream (io.BytesIO): 包含原始DOCX文件内容的内存流。
+
+    Returns:
+        io.BytesIO: 不含缩略图的新DOCX文件内容的内存流。
+    """
+    # 确保流的指针在开头
+    docx_stream.seek(0)
+
+    # 创建一个新的内存流用于存放修改后的文件
+    final_stream = io.BytesIO()
+
+    # 以只读模式打开原始流，以写入模式打开新流
+    with zipfile.ZipFile(docx_stream, 'r') as zin:
+        with zipfile.ZipFile(final_stream, 'w', zipfile.ZIP_DEFLATED) as zout:
+            # 遍历原始ZIP包中的所有文件
+            for item in zin.infolist():
+                # 如果文件名不是缩略图，则将其复制到新的ZIP包中
+                # 缩略图通常位于 'docProps/thumbnail.*'
+                if not item.filename.startswith('docProps/thumbnail'):
+                    zout.writestr(item, zin.read(item.filename))
+
+    final_stream.seek(0)
+    return final_stream
+
+
 def set_modern_compatibility(document):
-    """
-    修改文档兼容性设置，使其符合最新的Word标准 (Word 365/2019/2016)。
-    这是生成“现代化”文档最关键的一步。
-    """
+    """修改文档兼容性设置，使其符合最新的Word标准。"""
     settings = document.settings.element
     compat_elements = settings.xpath('w:compat')
     compat = compat_elements[0] if compat_elements else OxmlElement('w:compat')
 
-    # 创建或更新兼容性设置
     compat_setting = OxmlElement('w:compatSetting')
     compat_setting.set(qn('w:name'), 'compatibilityMode')
     compat_setting.set(qn('w:uri'), 'http://schemas.microsoft.com/office/word')
-    compat_setting.set(qn('w:val'), '16')  # '16' 代表最新的Word版本
+    compat_setting.set(qn('w:val'), '16')
     compat.append(compat_setting)
 
     if not compat_elements:
@@ -51,26 +79,20 @@ def add_hyperlink(paragraph, text, url):
     r_id = part.relate_to(url, docx.opc.constants.RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
     hyperlink = OxmlElement('w:hyperlink')
     hyperlink.set(qn('r:id'), r_id)
-
     new_run = OxmlElement('w:r')
     rPr = OxmlElement('w:rPr')
-
-    # 保持超链接字体与文档默认字体一致
     font_name = '新宋体'
     rFonts = OxmlElement('w:rFonts')
-    rFonts.set(qn('w:ascii'), font_name)
-    rFonts.set(qn('w:hAnsi'), font_name)
+    rFonts.set(qn('w:ascii'), font_name);
+    rFonts.set(qn('w:hAnsi'), font_name);
     rFonts.set(qn('w:eastAsia'), font_name)
     rPr.append(rFonts)
-
-    # 设置蓝色和下划线
-    color = OxmlElement('w:color')
-    color.set(qn('w:val'), '0000FF')
+    color = OxmlElement('w:color');
+    color.set(qn('w:val'), '0000FF');
     rPr.append(color)
-    underline = OxmlElement('w:u')
-    underline.set(qn('w:val'), 'single')
+    underline = OxmlElement('w:u');
+    underline.set(qn('w:val'), 'single');
     rPr.append(underline)
-
     new_run.append(rPr)
     new_run.text = text
     hyperlink.append(new_run)
@@ -79,63 +101,43 @@ def add_hyperlink(paragraph, text, url):
 
 
 def create_modern_docx(articles_data):
-    """
-    一个工厂函数，用于创建一个配置完整的、现代化的DOCX文档对象。
-    """
+    """一个工厂函数，用于创建一个配置完整的、现代化的DOCX文档对象。"""
     document = docx.Document()
-
-    # 1. 设置文档为最新标准，禁用兼容模式
     set_modern_compatibility(document)
-
-    # 2. 设置专业的元数据 (文件属性)
     now_utc = datetime.datetime.now(utc_tz)
     core_properties = document.core_properties
-    core_properties.author = '星火调研易'
+    core_properties.author = '星火调研易';
     core_properties.last_modified_by = '星火调研易'
-    core_properties.created = now_utc  # 使用UTC时间避免时区错误
+    core_properties.created = now_utc;
     core_properties.modified = now_utc
-    core_properties.comments = ''  # 清空备注
-    core_properties.title = '星火选题库'
-
-    # 3. 设置全局默认样式 (字体、段落)
+    core_properties.comments = '';
+    core_properties.title = f"星火选题库导出 {datetime.datetime.now(beijing_tz).strftime('%Y-%m-%d')}"
     style = document.styles['Normal']
-    font = style.font
-    font.name = '新宋体'
+    font = style.font;
+    font.name = '新宋体';
     style.element.rPr.rFonts.set(qn('w:eastAsia'), '新宋体')
-
     p_format = style.paragraph_format
-    p_format.first_line_indent = Pt(0)
+    p_format.first_line_indent = Pt(0);
     p_format.left_indent = Pt(0)
-    p_format.space_after = Pt(6)  # 约0.5行
+    p_format.space_after = Pt(6);
     p_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
-
-    # 4. 设置页面布局 (窄边距)
     section = document.sections[0]
-    section.top_margin = Inches(0.5)
+    section.top_margin = Inches(0.5);
     section.bottom_margin = Inches(0.5)
-    section.left_margin = Inches(0.5)
+    section.left_margin = Inches(0.5);
     section.right_margin = Inches(0.5)
-
-    # 5. 填充内容
     for article, feed in articles_data:
-        # 添加标题
-        p_title = document.add_paragraph()
+        p_title = document.add_paragraph();
         p_title.add_run(f"{article.title} ({feed.mp_name})").bold = True
-
-        # 添加发布时间
         publish_time = datetime.datetime.fromtimestamp(article.publish_time, tz=beijing_tz)
         document.add_paragraph(publish_time.strftime('%Y-%m-%d %H:%M:%S'))
-
-        # 添加链接
-        p_link = document.add_paragraph()
+        p_link = document.add_paragraph();
         add_hyperlink(p_link, article.url, article.url)
-
     return document
 
 
 # --- FastAPI 路由 ---
-
-@router.get("/docx/{feed_id}", summary="按时间范围导出公众号文章为现代DOCX")
+@router.get("/docx/{feed_id}", summary="按时间范围导出公众号文章为现代DOCX (无缩略图)")
 async def export_articles_to_docx(
         feed_id: str,
         start_date: str = Query(..., description="开始日期 (北京时间, 格式: YYYY-MM-DD HH:MM:SS)"),
@@ -160,21 +162,25 @@ async def export_articles_to_docx(
     if not articles_with_feed:
         raise HTTPException(status_code=404, detail="在指定时间范围内未找到任何文章")
 
-    # 使用工厂函数创建配置好的文档
     document = create_modern_docx(articles_with_feed)
 
-    # 生成动态文件名
+    # --- 核心修改：移除缩略图 ---
+    # 1. 先将文档保存到初始的内存流中
+    initial_stream = io.BytesIO()
+    document.save(initial_stream)
+
+    # 2. 调用新函数处理这个流，得到一个不含缩略图的最终流
+    final_stream = remove_thumbnail_from_docx(initial_stream)
+    # --- 修改结束 ---
+
     first_time = datetime.datetime.fromtimestamp(articles_with_feed[0][0].publish_time, tz=beijing_tz)
     last_time = datetime.datetime.fromtimestamp(articles_with_feed[-1][0].publish_time, tz=beijing_tz)
     filename = f"星火选题库({first_time.strftime('%m.%d')}_{last_time.strftime('%m.%d')}).docx"
-
-    # 保存到内存流并返回
-    file_stream = io.BytesIO()
-    document.save(file_stream)
-    file_stream.seek(0)
 
     headers = {
         'Content-Disposition': f"attachment; filename*=UTF-8''{quote(filename)}",
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     }
-    return StreamingResponse(file_stream, headers=headers)
+
+    # 使用处理过的、不含缩略图的最终流来创建响应
+    return StreamingResponse(final_stream, headers=headers)
