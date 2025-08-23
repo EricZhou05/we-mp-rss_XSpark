@@ -6,10 +6,6 @@ WORKDIR /app
 # ENV PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 ENV PIP_INDEX_URL=https://mirrors.huaweicloud.com/repository/pypi/simple
 
-COPY requirements.txt .
-# 安装依赖
-RUN pip3 install -r requirements.txt -i ${PIP_INDEX_URL}
-
 # 复制Python依赖文件
 # 复制后端代码
 COPY . .
