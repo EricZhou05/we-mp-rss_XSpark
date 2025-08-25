@@ -14,3 +14,4 @@ build
 dist
 data1
 .idea
+/static/
