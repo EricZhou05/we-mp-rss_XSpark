@@ -1,0 +1,39 @@
+# Python 虚拟环境
+.venv/
+venv/
+
+# Python 编译文件和缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE 和编辑器配置
+.idea/
+.vscode/
+
+# 构建产物和分发包
+build/
+dist/
+
+# 日志文件和本地数据库
+*.log
+*.db
+db.db
+
+# 配置文件和临时数据 (这些文件通常通过卷挂载或环境变量注入)
+config.yaml
+*.xml
+data/
+data1/
+item/
+
+# Git 和 Docker 相关文件
+.git
+.gitignore
+.dockerignore
+Dockerfile*
+dock_build.bat
+
+# Web UI 文件夹
+web_ui/
