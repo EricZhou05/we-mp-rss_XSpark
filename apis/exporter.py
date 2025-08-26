@@ -19,7 +19,7 @@ from core.models import Feed, Article
 from apis.base import error_response
 
 # --- 全局配置 ---
-router = APIRouter(prefix="/exporter", tags=["Exporter"])
+router = APIRouter(prefix="/exporter", tags=["导出选题"])
 beijing_tz = pytz.timezone('Asia/Shanghai')
 utc_tz = pytz.utc
 
@@ -137,7 +137,7 @@ def create_modern_docx(articles_data):
 
 
 # --- FastAPI 路由 ---
-@router.get("/docx/{feed_id}", summary="按时间范围导出公众号文章为现代DOCX (无缩略图)")
+@router.get("/docx/{feed_id}", summary="按时间范围导出公众号文章为DOCX")
 async def export_articles_to_docx(
         feed_id: str,
         start_date: str = Query(..., description="开始日期 (北京时间, 格式: YYYY-MM-DD HH:MM:SS)"),
