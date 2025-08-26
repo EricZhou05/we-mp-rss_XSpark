@@ -31,7 +31,7 @@ secret: ${SECRET_KEY:-we-mp-rss}
 user_agent: ${USER_AGENT:-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36/WeRss}
 
 #定时任务执行每篇稿件间隔时间 单位秒 默认10s 允许值 1-60秒之间
-interval: ${SPAN_INTERVAL:- 10}
+interval: ${SPAN_INTERVAL:- 1}
 
 webhook:
   #文章内容的发送格式(默认使用html格式，可选text、markdown)
@@ -44,9 +44,9 @@ debug: ${DEBUG:-False}
 
 
 #最大页数 第一次添加 采集的页数默认5页
-max_page: ${MAX_PAGE:-5}
+max_page: ${MAX_PAGE:-2}
 #更新页数 之后的更新 采集的页数默认1页
-page_limit: ${PAGE_LIMIT:-1}
+page_limit: ${PAGE_LIMIT:-2}
 
 rss:
   #RSS域名地址：如https://www.xxx.com/
@@ -81,7 +81,7 @@ article:
 
 gather:
   #是否采集内容  默认True
-  content: ${GATHER.CONTENT:-True}
+  content: ${GATHER.CONTENT:-False}
   #采集模式，web模式（可采集到发布链接)，api模式（可采集临时链接），app模式（采集最新消息）
   model: ${GATHER.MODEL:-app}
   #是否自动检查未采集文章内容，默认False
