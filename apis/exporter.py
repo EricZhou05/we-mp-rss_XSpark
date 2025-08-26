@@ -2,6 +2,8 @@ import io
 import datetime
 import pytz
 import zipfile  # 引入zipfile库
+import json
+from typing import Optional
 from urllib.parse import quote
 
 import docx
@@ -10,12 +12,13 @@ from docx.enum.text import WD_LINE_SPACING
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from core.db import DB
 from core.models import Feed, Article
+from core.models.tags import Tags
 from apis.base import error_response
 
 # --- 全局配置 ---
@@ -137,13 +140,17 @@ def create_modern_docx(articles_data):
 
 
 # --- FastAPI 路由 ---
-@router.get("/docx/{feed_id}", summary="按时间范围导出公众号文章为DOCX")
+@router.get("/docx", summary="按时间范围导出公众号文章为DOCX（支持按公众号或标签）")
 async def export_articles_to_docx(
-        feed_id: str,
         start_date: str = Query(..., description="开始日期 (北京时间, 格式: YYYY-MM-DD HH:MM:SS)"),
         end_date: str = Query(..., description="结束日期 (北京时间, 格式: YYYY-MM-DD HH:MM:SS)"),
+        feed_id: Optional[str] = Query(None, description="要导出的单个公众号ID (与 tag_id 二选一), 'all' 表示全部"),
+        tag_id: Optional[str] = Query(None, description="要导出的标签ID (与 feed_id 二选一)"),
         db: Session = Depends(DB.session_dependency)
 ):
+    if (feed_id is None and tag_id is None) or (feed_id is not None and tag_id is not None):
+        raise HTTPException(status_code=400, detail="必须提供 feed_id 或 tag_id，且二者只能提供一个。")
+
     try:
         start_dt_naive = datetime.datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
         end_dt_naive = datetime.datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S')
@@ -154,13 +161,52 @@ async def export_articles_to_docx(
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式错误，应为 'YYYY-MM-DD HH:MM:SS'")
 
-    articles_with_feed = db.query(Article, Feed).join(Feed, Article.mp_id == Feed.id) \
-        .filter(Article.mp_id == feed_id if feed_id != "all" else True) \
-        .filter(Article.publish_time.between(start_timestamp, end_timestamp)) \
+        # 动态构建查询
+    query = db.query(Article, Feed).join(Feed, Article.mp_id == Feed.id)
+    export_name = ""
+
+    if tag_id is not None:
+        tag = db.query(Tags).filter(Tags.id == tag_id).first()
+        if not tag:
+            # 如果标签不存在，直接抛出异常
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": 40402, "message": f"标签 (ID: {tag_id}) 不存在"}
+            )
+
+        # 解析 mps_id 字符串
+        mps_ids = [str(mp['id']) for mp in json.loads(tag.mps_id)] if tag.mps_id else []
+
+        if not mps_ids:
+            # 如果标签下没有关联的公众号，也视为找不到内容
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"标签 '{tag.name}' 下未关联任何公众号")
+
+        query = query.filter(Feed.id.in_(mps_ids))
+        export_name = tag.name
+
+    elif feed_id is not None:
+        if feed_id.lower() == "all":
+            export_name = "全部选题"
+            # 当 feed_id 为 'all' 时，不需要对 query 应用额外的 mp_id 过滤器
+        else:
+            # 验证单个 feed_id 是否存在
+            feed = db.query(Feed).filter(Feed.id == feed_id).first()
+            if not feed:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={"code": 40401, "message": f"公众号 (ID: {feed_id}) 不存在"}
+                )
+
+            # 对 query 应用 mp_id 过滤器
+            query = query.filter(Article.mp_id == feed_id)
+            export_name = feed.mp_name
+
+    # 应用统一的时间过滤器和排序
+    articles_with_feed = query.filter(Article.publish_time.between(start_timestamp, end_timestamp)) \
         .order_by(Article.publish_time.asc()).all()
 
     if not articles_with_feed:
-        raise HTTPException(status_code=404, detail="在指定时间范围内未找到任何文章")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="在指定的时间范围和条件下未找到任何文章")
 
     document = create_modern_docx(articles_with_feed)
 
@@ -175,7 +221,7 @@ async def export_articles_to_docx(
 
     first_time = datetime.datetime.fromtimestamp(articles_with_feed[0][0].publish_time, tz=beijing_tz)
     last_time = datetime.datetime.fromtimestamp(articles_with_feed[-1][0].publish_time, tz=beijing_tz)
-    filename = f"星火选题库({first_time.strftime('%m.%d')}_{last_time.strftime('%m.%d')}).docx"
+    filename = f"星火选题库_{export_name}({first_time.strftime('%m.%d')}_{last_time.strftime('%m.%d')}).docx"
 
     headers = {
         'Content-Disposition': f"attachment; filename*=UTF-8''{quote(filename)}",
