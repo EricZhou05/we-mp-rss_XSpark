@@ -93,7 +93,42 @@
                 </template>
               </a-dropdown>
 
-              <!-- [新增] 导出选题下拉按钮 -->
+              <!-- [新增] 选择标签按钮，仅在“全部”时显示 -->
+              <a-trigger
+                v-if="activeMpId === ''"
+                position="br"
+                :popup-translate="[0, 10]"
+                trigger="click"
+                :unmount-on-close="false"
+              >
+                <a-button>
+                  <template #icon><icon-tags /></template>
+                  选择标签
+                  <span v-if="selectedTagIds.length > 0">&nbsp;({{ selectedTagIds.length }})</span>
+                </a-button>
+                <template #content>
+                  <a-card :style="{ width: '280px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }" title="选择标签导出" :bordered="false">
+                    <a-spin :loading="tagsLoading" style="width: 100%">
+                      <a-checkbox-group v-if="tags.length > 0" v-model="selectedTagIds" direction="vertical">
+                        <div v-for="tag in displayTags" :key="tag.id" class="tag-option">
+                          <a-checkbox :value="tag.id">{{ tag.name }}</a-checkbox>
+                        </div>
+                      </a-checkbox-group>
+                      <a-empty v-else description="暂无标签" />
+
+                      <a-divider v-if="hasMoreTags" :margin="8" />
+
+                      <div v-if="hasMoreTags" style="text-align: center;">
+                        <a-button type="text" @click="showAllTags = !showAllTags">
+                          {{ showAllTags ? '收起' : '显示更多' }}
+                        </a-button>
+                      </div>
+                    </a-spin>
+                  </a-card>
+                </template>
+              </a-trigger>
+
+              <!-- [修改] 导出选题下拉按钮 -->
               <a-dropdown>
                 <a-button type="primary" :loading="exportLoading">
                   <template #icon>
@@ -149,7 +184,6 @@
             </template>
           </a-table>
 
-
           <a-modal v-model:visible="refreshModalVisible" title="刷新设置">
             <a-form :model="refreshForm" :rules="refreshRules">
               <a-form-item label="起始页" field="startPage">
@@ -188,20 +222,20 @@
 
 <script setup lang="ts">
 import { Avatar } from '@/utils/constants'
-import { translatePage, setCurrentLanguage } from '@/utils/translate';
-import { ref, onMounted, h } from 'vue'
-import axios from 'axios'
-import { IconApps, IconAtt, IconDelete, IconEdit, IconEye, IconRefresh, IconScan, IconWeiboCircleFill, IconWifi, IconCode, IconDownload } from '@arco-design/web-vue/es/icon' // [新增] IconDownload
+import { ref, onMounted, h, computed } from 'vue' // [新增] computed
+import { IconDelete, IconEye, IconRefresh, IconScan, IconWifi, IconDownload, IconTags } from '@arco-design/web-vue/es/icon' // [新增] IconTags, IconDownload
 import { getArticles, deleteArticle as deleteArticleApi, ClearArticle, ClearDuplicateArticle, getArticleDetail } from '@/api/article'
-import { ExportOPML, ExportMPS, ImportMPS, exportArticlesAsDocx } from '@/api/export' // [修改] 导入新函数
+import { ExportOPML, ExportMPS, exportArticlesAsDocx } from '@/api/export' // [确认] 导入 exportArticlesAsDocx
 import { getSubscriptions, UpdateMps } from '@/api/subscription'
+import { listTags } from '@/api/tagManagement' // [新增] 导入标签API
 import { inject } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { formatDateTime, formatTimestamp } from '@/utils/date'
 import router from '@/router'
 import { deleteMpApi } from '@/api/subscription'
 import TextIcon from '@/components/TextIcon.vue'
-import dayjs from 'dayjs' // [新增] 导入 dayjs
+import dayjs from 'dayjs' // [确认] 导入 dayjs
+import type { Tag } from '@/types/tagManagement' // [新增] 导入Tag类型
 
 const articles = ref([])
 const loading = ref(false)
@@ -231,10 +265,39 @@ const pagination = ref({
   pageSizeOptions: [10]
 })
 
-// [新增] 导出功能相关状态
+// [新增] 导出和标签功能相关状态
 const exportLoading = ref(false);
+const tags = ref<Tag[]>([]);
+const selectedTagIds = ref<string[]>([]);
+const tagsLoading = ref(false);
+const showAllTags = ref(false);
+const TAGS_INITIAL_LIMIT = 6;
 
-// [新增] 导出选项
+// [新增] 计算属性，用于控制标签显示数量
+const displayTags = computed(() => {
+    if (showAllTags.value) {
+        return tags.value;
+    }
+    return tags.value.slice(0, TAGS_INITIAL_LIMIT);
+});
+const hasMoreTags = computed(() => tags.value.length > TAGS_INITIAL_LIMIT);
+
+
+// [新增] 获取所有标签的函数
+const fetchAllTags = async () => {
+  tagsLoading.value = true;
+  try {
+    // 获取全部标签，假设总数不多于1000
+    const res = await listTags({ offset: 0, limit: 1000 });
+    tags.value = res.list || [];
+  } catch (error) {
+    Message.error('获取标签列表失败');
+    console.error('Failed to fetch tags:', error);
+  } finally {
+    tagsLoading.value = false;
+  }
+};
+
 const dateRangeOptions = [
   { label: '今天', value: 'today' },
   { label: '昨天至今', value: 'yesterday_today' },
@@ -326,14 +389,6 @@ const handleMpClick = (mpId: string) => {
 const fetchArticles = async () => {
   loading.value = true
   try {
-    console.log('请求参数:', {
-      page: pagination.value.current - 1,
-      pageSize: pagination.value.pageSize,
-      search: searchText.value,
-      status: filterStatus.value,
-      mp_id: activeMpId.value
-    })
-
     const res = await getArticles({
       page: pagination.value.current - 1,
       pageSize: pagination.value.pageSize,
@@ -342,7 +397,6 @@ const fetchArticles = async () => {
       mp_id: activeMpId.value
     })
 
-    // 确保数据包含必要字段
     articles.value = (res.list || []).map(item => ({
       ...item,
       mp_name: item.mp_name || item.account_name || '未知公众号',
@@ -352,14 +406,13 @@ const fetchArticles = async () => {
     pagination.value.total = res.total || 0
   } catch (error) {
     console.error('获取文章列表错误:', error)
-    Message.error(error)
+    Message.error(error as string)
   } finally {
     loading.value = false
   }
 }
 
 const handlePageChange = (page: number, pageSize: number, type?: string) => {
-  console.log('分页事件触发:', { page, pageSize, type })
   pagination.value.current = page
   pagination.value.pageSize = pageSize
   fetchArticles()
@@ -370,7 +423,6 @@ const handleSearch = () => {
   fetchArticles()
 }
 
-const wechatAuthQrcodeRef = ref()
 const showAuthQrcode = inject('showAuthQrcode') as () => void
 const handleAuthClick = () => {
   showAuthQrcode()
@@ -379,7 +431,7 @@ const handleAuthClick = () => {
 const exportOPML = async () => {
   try {
     const response = await ExportOPML();
-    const blob = new Blob([response], { type: 'application/xml' });
+    const blob = new Blob([response as any], { type: 'application/xml' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -388,7 +440,7 @@ const exportOPML = async () => {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-  } catch (error) {
+  } catch (error: any) {
     console.error('导出OPML失败:', error);
     Message.error(error?.message || '导出OPML失败');
   }
@@ -427,7 +479,7 @@ const importMPS = async () => {
       Message.info(response?.message || "导入成功");
     };
     input.click();
-  } catch (error) {
+  } catch (error: any) {
     Message.error(error?.message || '导入公众号失败');
   }
 };
@@ -450,54 +502,55 @@ const openRssFeed = () => {
   }
 }
 
-// [新增] 导出选题的核心函数
+// [修改] 导出选题的核心函数，支持按标签导出并优化错误处理
 const handleExport = async (dateRangeValue: string) => {
-  const feedId = activeMpId.value || 'all';
-
   const now = dayjs();
   let startDate: dayjs.Dayjs;
   const endDate = now;
 
   switch (dateRangeValue) {
-    case 'today':
-      startDate = now.startOf('day');
-      break;
-    case 'yesterday_today':
-      startDate = now.subtract(1, 'day').startOf('day');
-      break;
-    case 'day_before_yesterday_today':
-      startDate = now.subtract(2, 'day').startOf('day');
-      break;
-    case 'three_days_ago_today':
-      startDate = now.subtract(3, 'day').startOf('day');
-      break;
-    default:
-      Message.error('无效的时间范围');
-      return;
+    case 'today': startDate = now.startOf('day'); break;
+    case 'yesterday_today': startDate = now.subtract(1, 'day').startOf('day'); break;
+    case 'day_before_yesterday_today': startDate = now.subtract(2, 'day').startOf('day'); break;
+    case 'three_days_ago_today': startDate = now.subtract(3, 'day').startOf('day'); break;
+    default: Message.error('无效的时间范围'); return;
   }
 
-  const params = {
+  // 构建基础参数
+  const params: {
+    start_date: string;
+    end_date: string;
+    feed_id?: string;
+    tag_id?: string[];
+  } = {
     start_date: startDate.format('YYYY-MM-DD HH:mm:ss'),
     end_date: endDate.format('YYYY-MM-DD HH:mm:ss'),
   };
+
+  // 动态决定是使用 feed_id 还是 tag_id
+  if (activeMpId.value === '' && selectedTagIds.value.length > 0) {
+    // 条件：在“全部”视图下，并且用户已选择一个或多个标签
+    params.tag_id = selectedTagIds.value;
+  } else {
+    // 其他所有情况：导出单个公众号，或在“全部”视图下未选择任何标签
+    params.feed_id = activeMpId.value || 'all';
+  }
 
   exportLoading.value = true;
   Message.info('正在生成导出文件，请稍候...');
 
   try {
-    const res = await exportArticlesAsDocx(feedId, params);
+    const res = await exportArticlesAsDocx(params);
 
     const contentDisposition = res.headers['content-disposition'];
     let filename = 'export.docx';
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)/);
-      if (filenameMatch && filenameMatch.length > 1) {
+      if (filenameMatch?.[1]) {
         filename = decodeURIComponent(filenameMatch[1]);
       } else {
         const fallbackMatch = contentDisposition.match(/filename="(.+)"/);
-        if (fallbackMatch && fallbackMatch.length > 1) {
-          filename = fallbackMatch[1];
-        }
+        if (fallbackMatch?.[1]) filename = fallbackMatch[1];
       }
     }
 
@@ -512,39 +565,37 @@ const handleExport = async (dateRangeValue: string) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
     Message.success('文件导出成功！');
-
   } catch (err: any) {
-    // [修改] 简化404和其他错误的处理逻辑
-    if (err.response && err.response.status === 404) {
-      // Axios 会自动解析JSON，无需FileReader
-      // 后端返回的结构是 { detail: { message: "..." } }
-      const errorMessage = err.response.data?.detail?.message || '在该时间段内没有可导出的文章';
-      Message.warning(errorMessage);
+    // [增强] 统一处理错误，特别是Blob类型的错误响应
+    if (err.response && err.response.data instanceof Blob) {
+      try {
+        const errorText = await err.response.data.text();
+        const errorJson = JSON.parse(errorText);
+        // 后端可能返回 { detail: "message" } 或 { detail: { code: ..., message: "..." } }
+        const detail = errorJson.detail;
+        const errorMessage = (typeof detail === 'object' && detail.message) ? detail.message : detail;
+        Message.warning(errorMessage || '导出失败，未找到内容或参数错误');
+      } catch (parseError) {
+        Message.error('导出失败，无法解析错误信息');
+      }
     } else {
       console.error('导出过程中发生错误:', err);
-      // 其他错误（网络问题、服务器500等）
-      Message.error('导出失败，请检查网络连接或联系管理员');
+      const detail = err.response?.data?.detail;
+      const errorMessage = (typeof detail === 'object' && detail.message) ? detail.message : detail;
+      Message.error(errorMessage || '导出失败，请检查网络或联系管理员');
     }
   } finally {
     exportLoading.value = false;
   }
 };
 
-
 const resetScrollPosition = () => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 const fullLoading = ref(false)
-
 const refreshModalVisible = ref(false)
-const refreshForm = ref({
-  startPage: 0,
-  endPage: 1
-})
+const refreshForm = ref({ startPage: 0, endPage: 1 })
 const refreshRules = {
   startPage: [{ required: true, message: '请输入开始页码' }],
   endPage: [{ required: true, message: '请输入结束页码' }]
@@ -596,9 +647,6 @@ const showAddModal = () => {
   router.push('/add-subscription')
 }
 
-const handleAddSuccess = () => {
-  fetchArticles()
-}
  const processedContent = (record: any) => {
  return record.content.replace(
       /(<img[^>]*src=["'])(?!\/static\/res\/logo\/)([^"']*)/g,
@@ -608,7 +656,6 @@ const handleAddSuccess = () => {
 const viewArticle = async (record: any,action_type: number) => {
   loading.value = true
   try {
-    // console.log(record)
     const article = await getArticleDetail(record.id,action_type)
     currentArticle.value = {
       id: article.id,
@@ -618,10 +665,10 @@ const viewArticle = async (record: any,action_type: number) => {
       url: article.url
     }
     articleModalVisible.value = true
-    window.location="#topreader"
+    window.location.hash="#topreader"
   } catch (error) {
     console.error('获取文章详情错误:', error)
-    Message.error(error)
+    Message.error(error as string)
   } finally {
     loading.value = false
   }
@@ -646,9 +693,6 @@ const deleteArticle = (id: number) => {
       Message.success('删除成功');
       fetchArticles();
     },
-    onCancel: () => {
-      Message.info('已取消删除操作');
-    }
   });
 }
 
@@ -660,7 +704,7 @@ const handleBatchDelete = () => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        await Promise.all(selectedRowKeys.value.map(id => deleteArticleApi(id)));
+        await Promise.all(selectedRowKeys.value.map(id => deleteArticleApi(id as number)));
         Message.success(`成功删除${selectedRowKeys.value.length}篇文章`);
         selectedRowKeys.value = [];
         fetchArticles();
@@ -668,14 +712,12 @@ const handleBatchDelete = () => {
         Message.error('删除部分文章失败');
       }
     },
-    onCancel: () => {
-      Message.info('已取消批量删除操作');
-    }
   });
 }
 
 onMounted(() => {
   console.log('组件挂载，开始获取数据')
+  fetchAllTags(); // [新增] 获取标签列表
   fetchMpList().then(() => {
     console.log('公众号列表获取完成')
     fetchArticles()
@@ -692,21 +734,23 @@ const fetchMpList = async () => {
       pageSize: mpPagination.value.pageSize
     })
 
-    mpList.value = res.list.map(item => ({
+    const list = res.list.map(item => ({
       id: item.id || item.mp_id,
       name: item.name || item.mp_name,
       avatar: item.avatar || item.mp_cover || '',
       mp_intro: item.mp_intro || item.mp_intro || '',
       article_count: item.article_count || 0
     }))
-    // 添加'全部'选项
-    mpList.value.unshift({
-      id: '',
-      name: '全部',
-      avatar: '/static/logo.svg',
-      mp_intro: '显示所有公众号文章',
-      article_count: res.total || 0
-    });
+    mpList.value = [
+      {
+        id: '',
+        name: '全部',
+        avatar: '/static/logo.svg',
+        mp_intro: '显示所有公众号文章',
+        article_count: res.total || 0
+      },
+      ...list
+    ];
     mpPagination.value.total = res.total || 0
   } catch (error) {
     console.error('获取公众号列表错误:', error)
@@ -715,106 +759,59 @@ const fetchMpList = async () => {
   }
 }
 const deleteMp = async (mpId: string) => {
-  try {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除该订阅号吗？删除后将无法恢复。',
-      okText: '确认',
-      cancelText: '取消',
-      onOk: async () => {
-        await deleteMpApi(mpId);
-        Message.success('订阅号删除成功');
-        fetchMpList();
-      },
-      onCancel: () => {
-        Message.info('已取消删除操作');
+  Modal.confirm({
+    title: '确认删除',
+    content: '确定要删除该订阅号吗？删除后将无法恢复。',
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      await deleteMpApi(mpId);
+      Message.success('订阅号删除成功');
+      // 如果删除的是当前选中的公众号，则切换到“全部”
+      if (activeMpId.value === mpId) {
+        handleMpClick('');
       }
-    });
-  } catch (error) {
-    console.error('删除订阅号失败:', error);
-    Message.error('删除订阅号失败，请稍后重试');
-  }
+      fetchMpList();
+    },
+  });
 }
-
-const importArticles = () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = async (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
-    try {
-      const content = await file.text();
-      const data = JSON.parse(content);
-      // 这里应该调用API导入数据
-      Message.success(`成功导入${data.length}篇文章`);
-    } catch (error) {
-      console.error('导入文章失败:', error);
-      Message.error('导入失败，请检查文件格式');
-    }
-  };
-  input.click();
-};
-
-const exportArticles = () => {
-  if (!articles.value.length) {
-    Message.warning('没有文章可导出');
-    return;
-  }
-
-  const data = JSON.stringify(articles.value, null, 2);
-  const blob = new Blob([data], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `articles_${activeMpId.value || 'all'}_${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  Message.success('导出成功');
-};
 </script>
 
 <style scoped>
 .article-list {
   /* height: calc(100vh - 186px); */
 }
-
 .a-layout-sider {
   overflow: hidden;
 }
-
 .a-list-item {
   cursor: pointer;
   padding: 12px 16px;
   transition: all 0.2s;
   margin-bottom: 0 !important;
 }
-
 .a-list-item:hover {
   background-color: var(--color-fill-2);
 }
-
 .active-mp {
   background-color: var(--color-primary-light-1);
 }
-
 .search-bar {
   display: flex;
   margin-bottom: 20px;
 }
-
 .arco-drawer-body img {
   max-width: 100vw !important;
   margin: 0 auto !important;
   padding: 0 !important;
 }
-
 .arco-drawer-body {
   z-index: 9999 !important;
-  /* 确保抽屉在其他内容之上 */
+}
+/* [新增] 标签选项样式 */
+.tag-option {
+  padding: 4px 0;
+  width: 100%;
 }
 
 :deep(.arco-btn .arco-icon-down) {
