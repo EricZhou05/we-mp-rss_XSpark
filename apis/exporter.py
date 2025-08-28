@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from core.auth import get_current_user
 from core.db import DB
 from core.models import Feed, Article
 from core.models.tags import Tags
@@ -181,6 +182,7 @@ async def export_articles_to_docx(
             None,
             description="要导出的标签ID，可重复传参: ?tag_id=1&tag_id=2"
         ),
+        current_user: dict = Depends(get_current_user),
         db: Session = Depends(DB.session_dependency)
 ):
     # 校验：二选一（feed_id 或 tag_id），且不能为空
