@@ -96,7 +96,7 @@
               <!-- [新增] 选择标签按钮，仅在“全部”时显示 -->
               <a-trigger
                 v-if="activeMpId === ''"
-                position="br"
+                position="bottom"
                 :popup-translate="[0, 10]"
                 trigger="click"
                 :unmount-on-close="false"
@@ -107,7 +107,7 @@
                   <span v-if="selectedTagIds.length > 0">&nbsp;({{ selectedTagIds.length }})</span>
                 </a-button>
                 <template #content>
-                  <a-card :style="{ width: '280px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }" title="选择标签导出" :bordered="false">
+                  <a-card :style="{ width: '280px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }" title="按标签导出选题" :bordered="false">
                     <a-spin :loading="tagsLoading" style="width: 100%">
                       <a-checkbox-group v-if="tags.length > 0" v-model="selectedTagIds" direction="vertical">
                         <div v-for="tag in displayTags" :key="tag.id" class="tag-option">
