@@ -475,8 +475,9 @@ const importMPS = async () => {
       if (!file) return;
       const formData = new FormData();
       formData.append('file', file);
-      const response = await ImportMPS(formData);
-      Message.info(response?.message || "导入成功");
+      const res = await ImportMPS(formData);
+      const data = (res as any).data ?? res;
+      Message.info(data?.message || "导入成功");
     };
     input.click();
   } catch (error: any) {
