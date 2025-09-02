@@ -23,3 +23,18 @@ export const ImportMPS = (formData) => {
     }
   })
 }
+
+export const ExportTags = () => {
+  return http.get('/wx/export/tags', {
+    params: { limit: 1000, offset: 0 },
+    responseType: 'blob',
+  });
+};
+
+export const ImportTags = (formData: FormData) => {
+  return http.post<{code: number, data: string}>('/wx/export/tags/import', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
