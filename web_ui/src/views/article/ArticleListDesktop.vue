@@ -394,9 +394,11 @@ const importMPS = async () => {
       formData.append('file', file);
       const response = await ImportMPS(formData);
       Message.info(response?.message || "导入成功");
+      // 自动刷新
+      await Promise.all([fetchMpList(), fetchArticles()]);
     };
     input.click();
-  } catch (error) {
+  } catch (error: any) {
     Message.error(error?.message || '导入公众号失败');
   }
 };
