@@ -225,7 +225,7 @@ import { Avatar } from '@/utils/constants'
 import { ref, onMounted, h, computed } from 'vue' // [新增] computed
 import { IconDelete, IconEye, IconRefresh, IconScan, IconWifi, IconDownload, IconTags } from '@arco-design/web-vue/es/icon' // [新增] IconTags, IconDownload
 import { getArticles, deleteArticle as deleteArticleApi, ClearArticle, ClearDuplicateArticle, getArticleDetail } from '@/api/article'
-import { ExportOPML, ExportMPS } from '@/api/export';
+import { ExportOPML, ExportMPS, ImportMPS } from '@/api/export';
 import { exportArticlesAsDocx } from '@/api/exporter'; // [确认] 导入 exportArticlesAsDocx
 import { getSubscriptions, UpdateMps } from '@/api/subscription'
 import { listTags } from '@/api/tagManagement' // [新增] 导入标签API
@@ -479,6 +479,8 @@ const importMPS = async () => {
       const res = await ImportMPS(formData);
       const data = (res as any).data ?? res;
       Message.info(data?.message || "导入成功");
+      // 自动刷新
+      await Promise.all([fetchMpList(), fetchArticles()]);
     };
     input.click();
   } catch (error: any) {
