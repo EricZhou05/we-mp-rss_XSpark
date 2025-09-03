@@ -73,7 +73,7 @@ import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { login } from '@/api/auth'
 
-const appTitle = computed(() => import.meta.env.VITE_APP_TITLE || '微信公众号订阅助手')
+const appTitle = computed(() => import.meta.env.VITE_APP_TITLE || '星火调研易')
 
 const router = useRouter()
 const loading = ref(false)

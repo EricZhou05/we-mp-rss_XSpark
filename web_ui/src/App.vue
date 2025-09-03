@@ -4,7 +4,7 @@
     <a-layout-header class="app-header" v-if="route.path !== '/login'">
       <div class="header-left">
         <div class="logo">
-          <img :src="logo" alt="avatar" :width="60" style="margin-right:1rem;">
+          <img :src="logo" alt="avatar" :width="25" style="margin-right:1rem;">
           <router-link to="/">{{ appTitle }}</router-link>
           <a-tooltip v-if="hasLogined" :content="!haswxLogined ? '未授权，请扫码登录' : '点我扫码授权'" position="bottom">
 
@@ -233,7 +233,7 @@ const showAuthQrcode = () => {
   qrcodeRef.value?.startAuth()
 }
 provide('showAuthQrcode', showAuthQrcode)
-const appTitle = computed(() => import.meta.env.VITE_APP_TITLE || '微信公众号订阅助手')
+const appTitle = computed(() => import.meta.env.VITE_APP_TITLE || '星火调研易')
 const logo = ref("/static/logo.svg")
 const router = useRouter()
 const route = useRoute()
