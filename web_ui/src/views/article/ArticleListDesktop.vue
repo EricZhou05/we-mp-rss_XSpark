@@ -26,7 +26,26 @@
                 <a-list-item @click="handleMpClick(item.id)" :class="{ 'active-mp': activeMpId === item.id }"
                   style="padding: 9px 8px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
                   <div style="display: flex; align-items: center;">
-                    <img :src="Avatar(item.avatar)" width="40" style="float:left;margin-right:1rem;" />
+                    <div v-if="item.id === ''"
+                         :style="{
+                           display: 'flex',
+                           alignItems: 'center',
+                           justifyContent: 'center',
+                           width: '40px',
+                           height: '40px',
+                           borderRadius: '50%',
+                           backgroundColor: 'var(--color-fill-2)',
+                           color: 'var(--color-text-1)',
+                           marginRight: '1rem',
+                           fontSize: '14px',
+                           fontWeight: 500,
+                           flexShrink: 0
+                         }">
+                      ALL
+                    </div>
+                    <img v-else :src="Avatar(item.avatar)" width="40" height="40"
+                         style="margin-right:1rem; border-radius: 50%; object-fit: cover;" />
+
                     <a-typography-text strong style="line-height:32px;">
                       {{ item.name || item.mp_name }}
                     </a-typography-text>
