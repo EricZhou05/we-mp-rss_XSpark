@@ -5,7 +5,7 @@
       <div class="header-left">
         <div class="logo">
           <img :src="logo" alt="avatar" :width="35" style="margin-right:1rem;">
-          <router-link to="/">{{ appTitle }}</router-link>
+          <router-link to="/" style="margin-right: 10px;">{{ appTitle }}</router-link>
           <a-divider direction="vertical" />
           <a-tooltip v-if="hasLogined" :content="!haswxLogined ? '未授权，请扫码登录' : '点我扫码授权'" position="bottom">
 
@@ -204,8 +204,8 @@ watch(
 }
 
 .logo .arco-divider-vertical {
-  margin: 0 16px;
-  height: 1.2em;
+  margin: 0 14px;
+  height: 1.8em;
 }
 
 .logo svg {
