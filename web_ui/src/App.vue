@@ -12,14 +12,6 @@
             <icon-scan @click="showAuthQrcode()" :style="{ marginLeft: '10px', cursor: 'pointer', color: !haswxLogined ? '#f00' : '#000' }"/>
           </a-tooltip>
         </div>
-        <a-space>
-            <a-select :defaultValue="currentLanguage" v-model:value="currentLanguage" @change="handleLanguageChange" >
-              <a-option value="">禁用</a-option>
-              <a-option value="chinese_simplified">简体中文</a-option>
-              <a-option value="chinese_traditional">繁體中文</a-option>
-              <a-option value="english" selected="selected">English</a-option>
-            </a-select>
-        </a-space>
       </div>
       <div class="header-right" v-if="hasLogined">
         <a-link href="/api/docs" target="_blank" style="margin-right: 20px;">Docs</a-link>
@@ -74,17 +66,9 @@
 </template>
 
 <script setup lang="ts">
-import translate from 'i18n-jsautotranslate'
 import { ref,watchEffect, computed, onMounted, watch, provide } from 'vue'
 import { Modal } from '@arco-design/web-vue/es/modal'
 import {getSysInfo} from '@/api/sysinfo'
-const currentLanguage = ref(localStorage.getItem('language') || 'chinese_simplified');
-
-
-const handleLanguageChange = (language: string) => {
-  setCurrentLanguage(language);
-  currentLanguage.value = language;
-};
 
 const sponsorVisible = ref(false)
 const showSponsorModal = (e: Event) => {
@@ -167,10 +151,8 @@ onMounted(() => {
   if (isAuthenticated.value) {
     fetchUserInfo()
   }
-  translatePage();
   fetchSysInfo();
 })
-import { translatePage, setCurrentLanguage } from '@/utils/translate';
 
 watch(
   () => route.path,
