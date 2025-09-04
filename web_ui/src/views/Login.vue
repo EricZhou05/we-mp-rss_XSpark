@@ -261,39 +261,49 @@ const handleSubmit = async () => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-/* 5. 登录卡片样式 */
+/* 5. 登录卡片样式 - 添加毛玻璃效果 */
 .login-card {
   width: 400px;
   padding: 40px;
-  background: white;
+  /* !!! 关键修改开始 !!! */
+  /* 修改背景为半透明，让底层背景能透过来 */
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  border: none;
+  /* 调整阴影以增强毛玻璃的浮动感 */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  /* 添加半透明边框，让卡片边缘更清晰 */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  /* 应用毛玻璃效果 */
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px); /* 兼容 Safari 浏览器 */
+  /* !!! 关键修改结束 !!! */
   transition: all 0.3s ease;
 }
 
 .login-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
+  /* 调整鼠标悬停时的阴影效果 */
+  box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.2);
 }
 
 
 :deep(.arco-form-item-label) {
-  color: #333 !important;
+  color: #333 !important; /* 字体颜色可能需要调整，以便在毛玻璃背景上清晰显示 */
 }
 
 :deep(.arco-input-wrapper) {
   height: 48px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  /* 调整输入框背景，如果需要适应毛玻璃效果 */
+  background: rgba(255, 255, 255, 0.7); /* 可以尝试半透明 */
+  border: 1px solid rgba(255, 255, 255, 0.3); /* 调整边框颜色 */
   border-radius: 8px;
   color: #1a202c;
   transition: all 0.2s ease;
 }
 
 :deep(.arco-input-wrapper:hover) {
-  border-color: #cbd5e0;
-  background: #fff;
+  border-color: rgba(255, 255, 255, 0.5); /* 调整悬停边框颜色 */
+  background: rgba(255, 255, 255, 0.8);
 }
 
 :deep(.arco-input-wrapper:focus-within) {
