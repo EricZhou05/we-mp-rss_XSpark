@@ -8,13 +8,22 @@
           <router-link to="/" style="margin-right: 10px;">{{ appTitle }}</router-link>
           <a-divider direction="vertical" />
           <a-tooltip v-if="hasLogined" :content="!haswxLogined ? '未授权，请扫码登录' : '点我扫码授权'" position="bottom">
-
-            <icon-scan @click="showAuthQrcode()" :style="{ marginLeft: '10px', cursor: 'pointer', color: !haswxLogined ? '#f00' : '#000' }"/>
+            <icon-scan @click="showAuthQrcode()" :style="{ marginLeft: '10px', cursor: 'pointer', color: !haswxLogined ? '#f00' : '#000' , fontSize: '20px', verticalAlign: 'middle'}"/>
           </a-tooltip>
         </div>
       </div>
       <div class="header-right" v-if="hasLogined">
-        <a-link href="/api/docs" target="_blank" style="margin-right: 20px;">Docs</a-link>
+        <a-tooltip content="联系开发者:eric050@foxmail.com">
+          <a href="mailto:eric050@foxmail.com" style="margin-right: 15px; color: var(--color-text-1); font-size: 20px; vertical-align: middle;">
+            <icon-email />
+          </a>
+        </a-tooltip>
+        <a-tooltip content="查看API文档">
+          <a href="/api/docs" target="_blank" style="color: var(--color-text-1); font-size: 20px; vertical-align: middle;">
+            <icon-book />
+          </a>
+        </a-tooltip>
+        <a-divider direction="vertical" />
 
         <a-dropdown position="br" trigger="click">
           <div class="user-info">
@@ -48,7 +57,6 @@
     </a-layout-header>
 
     <a-layout>
-
       <!-- 主内容区 -->
       <a-layout>
         <a-layout-content class="app-content">
@@ -60,9 +68,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref,watchEffect, computed, onMounted, watch, provide } from 'vue'
+import { ref, watchEffect, computed, onMounted, watch, provide } from 'vue'
 import { Modal } from '@arco-design/web-vue/es/modal'
-import {getSysInfo} from '@/api/sysinfo'
+import { getSysInfo } from '@/api/sysinfo'
+import {
+  IconBook,
+  IconEmail
+} from '@arco-design/web-vue/es/icon';
 
 const sponsorVisible = ref(false)
 const showSponsorModal = (e: Event) => {
@@ -211,6 +223,11 @@ watch(
 .header-right {
   display: flex;
   align-items: center;
+}
+
+.header-right .arco-divider-vertical {
+  margin: 0 15px;
+  height: 1.8em;
 }
 
 .user-info {
