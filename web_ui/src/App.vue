@@ -13,8 +13,8 @@
         </div>
       </div>
       <div class="header-right" v-if="hasLogined">
-        <a-tooltip content="联系开发者:eric050@foxmail.com">
-          <a href="mailto:eric050@foxmail.com" style="margin-right: 15px; color: var(--color-text-1); font-size: 20px; vertical-align: middle;">
+        <a-tooltip content="联系分支开发者:eric050@foxmail.com">
+          <a href="mailto:eric050@foxmail.com" style="margin-right: 20px; color: var(--color-text-1); font-size: 20px; vertical-align: middle;">
             <icon-email />
           </a>
         </a-tooltip>
@@ -226,8 +226,8 @@ watch(
 }
 
 .header-right .arco-divider-vertical {
-  margin: 0 15px;
-  height: 1.8em;
+  margin: 0 24px;
+  height: 2.2em;
 }
 
 .user-info {
