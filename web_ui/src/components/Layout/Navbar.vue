@@ -1,10 +1,11 @@
 <template>
-  <a-layout-header>
-    <a-menu
-      mode="horizontal"
-      :selected-keys="selectedKeys"
-      @menu-item-click="handleMenuClick"
-    >
+    <a-layout-header class="navbar-center">
+      <a-menu
+        class="navbar-center__menu"
+        mode="horizontal"
+        :selected-keys="selectedKeys"
+        @menu-item-click="handleMenuClick"
+      >
       <a-menu-item key="/">
         <template #icon>
           <icon-home />
@@ -64,3 +65,30 @@ const handleMenuClick = (key: string) => {
   router.push(key)
 }
 </script>
+
+<style scoped>
+.navbar-center {
+  display: flex;
+}
+
+/* 让 a-menu 占满容器，避免溢出误判 */
+.navbar-center__menu {
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+/* 关键：居中内部容器（不同版本类名可能略有差异，全部覆盖） */
+.navbar-center__menu :deep(.arco-menu-inner),
+.navbar-center__menu :deep(.arco-menu-overflow),
+.navbar-center__menu :deep(.arco-menu-overflow-wrap) {
+  display: flex !important;
+  justify-content: center !important;
+}
+
+/* 防止菜单项收缩、换行 */
+.navbar-center__menu :deep(.arco-menu-item),
+.navbar-center__menu :deep(.arco-menu-pop) {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+</style>
