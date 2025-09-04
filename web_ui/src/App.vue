@@ -44,12 +44,6 @@
           </template>
         </a-dropdown>
         <WechatAuthQrcode ref="qrcodeRef" />
-        <a-modal v-model:visible="sponsorVisible" title="感谢支持" :footer="false" :style="{ zIndex: 1000 }" unmount-on-close>
-          <div style="text-align: center;">
-            <p>如果您觉得这个项目对您有帮助,请给Rachel来一杯Coffee吧~ </p>
-            <img src="@/assets/images/sponsor.jpg" alt="赞赏码" style="max-width: 300px; margin-top: 20px;">
-          </div>
-        </a-modal>
       </div>
     </a-layout-header>
 
@@ -175,7 +169,7 @@ watch(
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 135px;
   height: 64px;
   background: var(--color-bg-2);
   border-bottom: 1px solid var(--color-border);
