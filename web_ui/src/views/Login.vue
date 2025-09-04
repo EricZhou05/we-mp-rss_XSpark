@@ -38,13 +38,13 @@
                 <template #prefix><icon-user /></template>
               </a-input>
             </a-form-item>
-            
+
             <a-form-item field="password" label="密码">
               <a-input-password v-model="form.password" placeholder="请输入密码">
                 <template #prefix><icon-lock /></template>
               </a-input-password>
             </a-form-item>
-            
+
             <a-form-item>
               <a-button type="primary" html-type="submit" :loading="loading" long>
                 登录
@@ -85,38 +85,28 @@ const form = ref({
 const handleSubmit = async () => {
   loading.value = true
   try {
-    // 使用URLSearchParams格式发送请求
-    const formData = new URLSearchParams()
-    formData.append('username', form.value.username)
-    formData.append('password', form.value.password)
-    
     const res = await login({
       username: form.value.username,
       password: form.value.password
     })
-    
-          if (res.access_token) {
-            // 存储token和过期时间
-            localStorage.setItem('token', res.access_token)
-            localStorage.setItem('token_expire', 
-              Date.now() + (res.expires_in * 1000))
-        
-            console.log('Token stored:', localStorage.getItem('token')) // 调试日志
-        
-            // 处理重定向
-            const redirect = router.currentRoute.value.query.redirect
-            await router.push(redirect ? redirect.toString() : '/')
-            Message.success('登录成功')
+
+    if (res.access_token) {
+      localStorage.setItem('token', res.access_token)
+      localStorage.setItem('token_expire', Date.now() + (res.expires_in * 1000))
+
+      const redirect = router.currentRoute.value.query.redirect
+      await router.push(redirect ? redirect.toString() : '/')
+      Message.success('登录成功')
     } else {
       throw new Error('无效的响应格式')
     }
   } catch (error) {
     console.error('登录错误:', error)
-    const errorMsg = error.response?.data?.detail || 
-                    error.response?.data?.message || 
-                    error.message || 
+    const errorMsg = error.response?.data?.detail ||
+                    error.response?.data?.message ||
+                    error.message ||
                     '登录失败，请检查用户名和密码'
-    // Message.error(errorMsg)
+    Message.error(errorMsg)
   } finally {
     loading.value = false
   }
@@ -124,14 +114,19 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
+/* 1. 设置容器为动态渐变背景 */
 .login-container {
+  position: relative; /* 为 footer 提供定位上下文 */
   height: 100vh;
+  overflow: hidden;
   padding: 0;
   margin: 0;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(168, 85, 247, 0.9) 100%);
   background-size: 200% 200%;
   animation: gradientBG 12s ease infinite;
 }
+
+/* 移除了壁纸和 ::before 伪元素 */
 
 @keyframes gradientBG {
   0% {
@@ -149,6 +144,8 @@ const handleSubmit = async () => {
   display: flex;
   height: 100%;
   transition: all 0.3s ease;
+  position: relative; /* 确保内容在背景之上 */
+  z-index: 1;
 }
 
 @keyframes fadeInUp {
@@ -162,14 +159,15 @@ const handleSubmit = async () => {
   }
 }
 
+/* 3. 左侧介绍区域，宽度占一半 */
 .login-left {
-  flex: 0 0 55%;
+  flex: 1; /* 使其与右侧平分空间 */
   padding: 80px;
   color: #ffffff;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: transparent;
+  background: transparent; /* 背景透明以显示容器的渐变 */
 }
 
 .intro-title {
@@ -201,16 +199,14 @@ const handleSubmit = async () => {
   animation-delay: 0.7s;
 }
 
+/* 4. 右侧登录区域，宽度占一半 */
 .login-right {
-  flex: 0 0 45%;
+  flex: 1; /* 使其与左侧平分空间 */
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 60px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(5px);
-  border: none;
-  box-shadow: none;
+  background: transparent; /* 确保背景透明 */
 }
 
 .login-form {
@@ -265,6 +261,7 @@ const handleSubmit = async () => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
+/* 5. 登录卡片样式 */
 .login-card {
   width: 400px;
   padding: 40px;
@@ -279,6 +276,7 @@ const handleSubmit = async () => {
   transform: translateY(-5px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
 }
+
 
 :deep(.arco-form-item-label) {
   color: #333 !important;
@@ -498,26 +496,29 @@ const handleSubmit = async () => {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 4h7v5h5v11H6V4zm8 18v-1h4v1h-4zm-3 0v-1h1v1h-1zm-2 0v-1h1v1h-1zm-2 0v-1h1v1H7z'/%3E%3C/svg%3E");
 }
 
+/* 6. 修复手机版布局 */
 @media (max-width: 992px) {
   .login-layout {
     flex-direction: column;
   }
-  
+
   .login-left,
   .login-right {
-    flex: 1;
+    flex: 1; /* 让左右两部分平分高度 */
+    width: 100%;
+    flex-basis: auto; /* 重置flex-basis */
     padding: 40px;
   }
-  
+
   .login-card {
     width: 100%;
     max-width: 400px;
   }
-  
+
   .intro-title {
     font-size: 2rem;
   }
-  
+
   .login-ad {
     display: none;
   }
@@ -535,15 +536,19 @@ const handleSubmit = async () => {
     width: 60% !important;
   }
   .login-container .login-right {
-    width: 100% !important;
-    flex: none !important;
+    /* 确保在小屏幕上，右侧也能填满剩余空间 */
+    flex-grow: 1;
+    flex-shrink: 0;
   }
   .login-container .login-left {
-    flex: none !important;
+     /* 调整左侧，使其内容收缩，留出更多空间给右侧 */
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: auto;
   }
   .login-container .login-card {
     width: 100% !important;
-    padding:0 !important;
+    padding: 20px !important; /* 保留一些内边距 */
   }
 }
 </style>
