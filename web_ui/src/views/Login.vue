@@ -6,24 +6,24 @@
         <div class="login-intro">
           <h1 class="intro-title">{{appTitle}}</h1>
           <p class="intro-text">
-            一个用于订阅和管理微信公众号内容的工具，提供RSS订阅功能
+            运营牛人都在用的内容灵感引擎，告别繁琐搜集，聚焦高效创作
           </p>
           <div class="login-features">
             <div class="feature-item">
               <icon-check-circle />
-              <span>公众号内容抓取和解析</span>
+              <span>对标监控，自动采集</span>
             </div>
             <div class="feature-item">
               <icon-check-circle />
-              <span>RSS订阅生成</span>
+              <span>多维标签，沉淀智库</span>
             </div>
             <div class="feature-item">
               <icon-check-circle />
-              <span>定时自动更新内容</span>
+              <span>选题成库，一键导出</span>
             </div>
             <div class="feature-item">
               <icon-check-circle />
-              <span>公众号监测、消息通知、WebHook调用 </span>
+              <span>洞察趋势，引爆灵感</span>
             </div>
           </div>
         </div>
@@ -213,7 +213,7 @@ const handleSubmit = async () => {
 }
 
 .login-intro {
-  max-width: 600px;
+  max-width: 700px;
   margin-bottom: 60px;
   padding-left: 90px; /* 增加左内边距，将内容向右推 */
   padding-right: 20px; /* 保持右侧一定的内边距 */
