@@ -55,14 +55,10 @@
       </div>
     </div>
     <div class="login-footer">
-      <div class="copyright">Design By Rachel</div>
-      <div class="footer-links">
-        <a-link href="https://github.com/rachelos/we-mp-rss" target="_blank">GitHub</a-link>
-        <span class="divider">|</span>
-        <a-link href="https://gitee.com/rachel_os/we-mp-rss" target="_blank">Gitee</a-link>
-        <span class="divider">|</span>
-        <a-link href="/api/docs" target="_blank">Docs</a-link>
-      </div>
+     <div class="footer-copyright-text">
+      Copyright © 2025 中山星火科技教育有限公司. All rights reserved.<br>
+      Based on original design by &nbsp; <a href="https://github.com/rachelos" target="_blank" rel="noopener noreferrer">Rachel</a>  &nbsp;  . Development and branching by &nbsp; <a href="https://github.com/EricZhou05" target="_blank" rel="noopener noreferrer">EricZhou</a>  &nbsp;  .
+     </div>
     </div>
   </div>
 </template>
@@ -219,6 +215,8 @@ const handleSubmit = async () => {
 .login-intro {
   max-width: 600px;
   margin-bottom: 60px;
+  padding-left: 90px; /* 增加左内边距，将内容向右推 */
+  padding-right: 20px; /* 保持右侧一定的内边距 */
 }
 
 .intro-title {
@@ -425,11 +423,12 @@ const handleSubmit = async () => {
   transition: all 0.2s ease;
   font-size: 0.875rem;
   font-weight: 500;
-  padding: 4px 8px;
+  padding: 0; /* 移除内边距以确保基线对齐 */
   border-radius: 6px;
   display: inline-flex;
-  align-items: center;
+  align-items: baseline; /* 使内部flex项目（图标和文本）按基线对齐 */
   gap: 6px;
+  vertical-align: baseline; /* 明确指定inline-flex容器自身的基线对齐 */
 }
 
 .login-footer a:hover {
@@ -439,19 +438,16 @@ const handleSubmit = async () => {
   text-decoration: none;
 }
 
-.copyright {
-  font-size: 0.875rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.footer-copyright-text {
+  color: #fff; /* 根据您的链接样式，设定文字颜色为白色 */
+  font-size: 0.875rem; /* 保持原来的字体大小 (14px) */
+  font-weight: 500;    /* 保持原来的字重 */
+  line-height: 2.2;    /* 关键：拉大行距。您可以根据需要调整这个数值，例如 1.6 或 2.0 */
+  text-align: center;  /* 如果您希望这两行文本居中对齐，可以加上这句 */
 }
 
-.copyright::before {
-  content: "©";
-  font-size: 0.75rem;
-  opacity: 0.7;
-}
+/* 已删除或注释掉冲突的 .footer-copyright-text a 规则，让 .login-footer a 控制样式 */
+
 
 .footer-links {
   display: flex;
@@ -463,7 +459,8 @@ const handleSubmit = async () => {
   user-select: none;
 }
 
-.login-footer a {
+/* 由于上面已经定义了 .login-footer a，此处的重复定义可以移除或保持不变，但确保关键属性被覆盖 */
+/* .login-footer a {
   text-decoration: none;
   transition: all 0.2s ease;
   font-size: 0.875rem;
@@ -473,7 +470,7 @@ const handleSubmit = async () => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
+} */
 
 .login-footer a:hover {
   transform: translateY(-1px);
@@ -492,6 +489,7 @@ const handleSubmit = async () => {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+  vertical-align: middle; /* 调整图标的垂直对齐，使其在视觉上与文本居中 */
 }
 
 .login-footer a[href*="github"]::before {

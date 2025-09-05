@@ -1,8 +1,9 @@
 <template>
   <a-spin :loading="fullLoading" tip="正在刷新..." size="large">
-    <a-layout class="article-list">
+    <!-- 外层：有 Sider 的主布局 -->
+    <a-layout class="article-list" style="min-height: 100vh;">
       <a-layout-sider :width="300"
-        :style="{ background: '#fff', padding: '0', borderRight: '1px solid #eee', display: 'flex', flexDirection: 'column', border: 0 }">
+        :style="{ background: '#fff', padding: '0', borderRight: '1px solid #eee', display: 'flex', flexDirection: 'column' }">
         <a-card :bordered="false" title="公众号"
           :headStyle="{ padding: '12px 16px', borderBottom: '1px solid #eee', background: '#fff', zIndex: 1, border: 0 }">
           <template #extra>
@@ -63,178 +64,195 @@
         </a-card>
       </a-layout-sider>
 
-      <a-layout-content :style="{ padding: '20px', width: '100%' }">
-        <a-page-header :title="activeFeed ? activeFeed.name : '全部'" :subtitle="'管理您的公众号订阅内容'" :show-back="false">
-          <template #extra>
-            <a-space>
-              <a-button @click="refresh" v-if="activeFeed?.id != ''">
-                <template #icon><icon-refresh /></template>
-                刷新
-              </a-button>
-              <a-button @click="clear_articles" v-else>
-                <template #icon><icon-delete /></template>
-                清理无效文章
-              </a-button>
-              <a-button @click="clear_duplicate_article" v-if="activeFeed?.id == ''">
-                <template #icon><icon-delete /></template>
-                清理重复文章
-              </a-button>
-              <a-button @click="handleAuthClick">
-                <template #icon><icon-scan /></template>
-                刷新授权
-              </a-button>
-
-              <!-- 原有的订阅按钮 -->
-              <a-dropdown>
-                <a-button>
-                  <template #icon>
-                    <IconWifi />
-                  </template>
-                  订阅
-                  <icon-down />
-                </a-button>
-                <template #content>
-                  <a-doption @click="rssFormat = 'atom'; openRssFeed()"><template #icon>
-                      <TextIcon text="atom" />
-                    </template>ATOM</a-doption>
-                  <a-doption @click="rssFormat = 'rss'; openRssFeed()"><template #icon>
-                      <TextIcon text="rss" />
-                    </template>RSS</a-doption>
-                  <a-doption @click="rssFormat = 'json'; openRssFeed()"><template #icon>
-                      <TextIcon text="json" />
-                    </template>JSON</a-doption>
-                  <a-doption @click="rssFormat = 'md'; openRssFeed()"><template #icon>
-                      <TextIcon text="md" />
-                    </template>Markdown</a-doption>
-                  <a-doption @click="rssFormat = 'txt'; openRssFeed()"><template #icon>
-                      <TextIcon text="txt" />
-                    </template>Text</a-doption>
-                </template>
-              </a-dropdown>
-
-              <!-- [新增] 选择标签按钮，仅在“全部”时显示 -->
-              <a-trigger
-                v-if="activeMpId === ''"
-                position="bottom"
-                :popup-translate="[0, 10]"
-                trigger="click"
-                :unmount-on-close="false"
-              >
-                <a-button>
-                  <template #icon><icon-tags /></template>
-                  选择标签
-                  <span v-if="selectedTagIds.length > 0">&nbsp;({{ selectedTagIds.length }})</span>
-                </a-button>
-                <template #content>
-                  <a-card :style="{ width: '280px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }" title="按标签导出选题" :bordered="false">
-                    <a-spin :loading="tagsLoading" style="width: 100%">
-                      <a-checkbox-group v-if="tags.length > 0" v-model="selectedTagIds" direction="vertical">
-                        <div v-for="tag in displayTags" :key="tag.id" class="tag-option">
-                          <a-checkbox :value="tag.id">{{ tag.name }}</a-checkbox>
-                        </div>
-                      </a-checkbox-group>
-                      <a-empty v-else description="暂无标签" />
-
-                      <a-divider v-if="hasMoreTags" :margin="8" />
-
-                      <div v-if="hasMoreTags" style="text-align: center;">
-                        <a-button type="text" @click="showAllTags = !showAllTags">
-                          {{ showAllTags ? '收起' : '显示更多' }}
-                        </a-button>
-                      </div>
-                    </a-spin>
-                  </a-card>
-                </template>
-              </a-trigger>
-
-              <!-- [修改] 导出选题下拉按钮 -->
-              <a-dropdown>
-                <a-button type="primary" :loading="exportLoading">
-                  <template #icon>
-                    <icon-download />
-                  </template>
-                  导出选题
-                  <icon-down />
-                </a-button>
-                <template #content>
-                  <a-doption v-for="item in dateRangeOptions" :key="item.value" @click="handleExport(item.value)">
-                    {{ item.label }}
-                  </a-doption>
-                </template>
-              </a-dropdown>
-
-              <a-button type="primary" status="danger" @click="handleBatchDelete" :disabled="!selectedRowKeys.length">
-                <template #icon><icon-delete /></template>
-                批量删除
-              </a-button>
-            </a-space>
-          </template>
-        </a-page-header>
-
-        <a-card style="border:0">
-          <a-alert type="success" closable>{{ activeFeed?.mp_intro || "请选择一个公众号码进行管理,搜索文章后再点击订阅会有惊喜哟！！！" }}</a-alert>
-          <div class="search-bar">
-            <a-input-search v-model="searchText" placeholder="搜索文章标题" @search="handleSearch" @keyup.enter="handleSearch"
-              allow-clear />
-          </div>
-
-          <a-table :columns="columns" :data="articles" :loading="loading" :pagination="pagination" :row-selection="{
-            type: 'checkbox',
-            showCheckedAll: true,
-            width: 50,
-            fixed: true,
-            checkStrictly: true,
-            onlyCurrent: false
-          }" row-key="id" @page-change="handlePageChange" v-model:selectedKeys="selectedRowKeys">
-            <template #status="{ record }">
-              <a-tag :color="statusColorMap[record.status]">
-                {{ statusTextMap[record.status] }}
-              </a-tag>
-            </template>
-            <template #actions="{ record }">
+      <!-- 右侧主列：内层纵向布局（内容 + 页脚） -->
+      <a-layout class="main-column">
+        <a-layout-content :style="{ padding: '20px', width: '100%', flex: 1 }">
+          <a-page-header :title="activeFeed ? activeFeed.name : '全部'" :subtitle="'管理您的公众号订阅内容'" :show-back="false">
+            <template #extra>
               <a-space>
-                <a-button type="text" @click="viewArticle(record)" :title="record.id">
-                  <template #icon><icon-eye /></template>
+                <a-button @click="refresh" v-if="activeFeed?.id != ''">
+                  <template #icon><icon-refresh /></template>
+                  刷新
                 </a-button>
-                <a-button type="text" status="danger" @click="deleteArticle(record.id)">
+                <a-button @click="clear_articles" v-else>
                   <template #icon><icon-delete /></template>
+                  清理无效文章
+                </a-button>
+                <a-button @click="clear_duplicate_article" v-if="activeFeed?.id == ''">
+                  <template #icon><icon-delete /></template>
+                  清理重复文章
+                </a-button>
+                <a-button @click="handleAuthClick">
+                  <template #icon><icon-scan /></template>
+                  刷新授权
+                </a-button>
+
+                <!-- 原有的订阅按钮 -->
+                <a-dropdown>
+                  <a-button>
+                    <template #icon>
+                      <IconWifi />
+                    </template>
+                    订阅
+                    <icon-down />
+                  </a-button>
+                  <template #content>
+                    <a-doption @click="rssFormat = 'atom'; openRssFeed()"><template #icon>
+                        <TextIcon text="atom" />
+                      </template>ATOM</a-doption>
+                    <a-doption @click="rssFormat = 'rss'; openRssFeed()"><template #icon>
+                        <TextIcon text="rss" />
+                      </template>RSS</a-doption>
+                    <a-doption @click="rssFormat = 'json'; openRssFeed()"><template #icon>
+                        <TextIcon text="json" />
+                      </template>JSON</a-doption>
+                    <a-doption @click="rssFormat = 'md'; openRssFeed()"><template #icon>
+                        <TextIcon text="md" />
+                      </template>Markdown</a-doption>
+                    <a-doption @click="rssFormat = 'txt'; openRssFeed()"><template #icon>
+                        <TextIcon text="txt" />
+                      </template>Text</a-doption>
+                  </template>
+                </a-dropdown>
+
+                <!-- [新增] 选择标签按钮，仅在“全部”时显示 -->
+                <a-trigger
+                  v-if="activeMpId === ''"
+                  position="bottom"
+                  :popup-translate="[0, 10]"
+                  trigger="click"
+                  :unmount-on-close="false"
+                >
+                  <a-button>
+                    <template #icon><icon-tags /></template>
+                    选择标签
+                    <span v-if="selectedTagIds.length > 0">&nbsp;({{ selectedTagIds.length }})</span>
+                  </a-button>
+                  <template #content>
+                    <a-card :style="{ width: '280px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }" title="按标签导出选题" :bordered="false">
+                      <a-spin :loading="tagsLoading" style="width: 100%">
+                        <a-checkbox-group v-if="tags.length > 0" v-model="selectedTagIds" direction="vertical">
+                          <div v-for="tag in displayTags" :key="tag.id" class="tag-option">
+                            <a-checkbox :value="tag.id">{{ tag.name }}</a-checkbox>
+                          </div>
+                        </a-checkbox-group>
+                        <a-empty v-else description="暂无标签" />
+
+                        <a-divider v-if="hasMoreTags" :margin="8" />
+
+                        <div v-if="hasMoreTags" style="text-align: center;">
+                          <a-button type="text" @click="showAllTags = !showAllTags">
+                            {{ showAllTags ? '收起' : '显示更多' }}
+                          </a-button>
+                        </div>
+                      </a-spin>
+                    </a-card>
+                  </template>
+                </a-trigger>
+
+                <!-- [修改] 导出选题下拉按钮 -->
+                <a-dropdown>
+                  <a-button type="primary" :loading="exportLoading">
+                    <template #icon>
+                      <icon-download />
+                    </template>
+                    导出选题
+                    <icon-down />
+                  </a-button>
+                  <template #content>
+                    <a-doption v-for="item in dateRangeOptions" :key="item.value" @click="handleExport(item.value)">
+                      {{ item.label }}
+                    </a-doption>
+                  </template>
+                </a-dropdown>
+
+                <a-button type="primary" status="danger" @click="handleBatchDelete" :disabled="!selectedRowKeys.length">
+                  <template #icon><icon-delete /></template>
+                  批量删除
                 </a-button>
               </a-space>
             </template>
-          </a-table>
+          </a-page-header>
 
-          <a-modal v-model:visible="refreshModalVisible" title="刷新设置">
-            <a-form :model="refreshForm" :rules="refreshRules">
-              <a-form-item label="起始页" field="startPage">
-                <a-input-number v-model="refreshForm.startPage" :min="1" />
-              </a-form-item>
-              <a-form-item label="结束页" field="endPage">
-                <a-input-number v-model="refreshForm.endPage" :min="1" />
-              </a-form-item>
-            </a-form>
-            <template #footer>
-              <a-button @click="refreshModalVisible = false">取消</a-button>
-              <a-button type="primary" @click="handleRefresh">确定</a-button>
-            </template>
-          </a-modal>
-          <a-modal id="article-model" v-model:visible="articleModalVisible"
-            placement="left" :footer="false" :fullscreen="false" @before-close="resetScrollPosition">
-            <h2 id="topreader">{{ currentArticle.title }}</h2>
-            <div style="margin-top: 20px; color: var(--color-text-3); text-align: left">
-              <a-link :href="currentArticle.url" target="_blank">查看原文</a-link>
-              更新时间 ：{{ currentArticle.time }}
-            <a-link @click="viewArticle(currentArticle,-1)" target="_blank">上一篇 </a-link>
-            <a-space/>
-            <a-link @click="viewArticle(currentArticle,1)" target="_blank">下一篇 </a-link>
+          <a-card style="border:0">
+            <a-alert type="success" closable>{{ activeFeed?.mp_intro || "请选择一个公众号码进行管理,搜索文章后再点击订阅会有惊喜哟！！！" }}</a-alert>
+            <div class="search-bar">
+              <a-input-search v-model="searchText" placeholder="搜索文章标题" @search="handleSearch" @keyup.enter="handleSearch"
+                allow-clear />
             </div>
-            <div v-html="currentArticle.content"></div>
 
-            <div style="margin-top: 20px; color: var(--color-text-3); text-align: right">
-              {{ currentArticle.time }}
+            <a-table :columns="columns" :data="articles" :loading="loading" :pagination="pagination" :row-selection="{
+              type: 'checkbox',
+              showCheckedAll: true,
+              width: 50,
+              fixed: true,
+              checkStrictly: true,
+              onlyCurrent: false
+            }" row-key="id" @page-change="handlePageChange" v-model:selectedKeys="selectedRowKeys">
+              <template #status="{ record }">
+                <a-tag :color="statusColorMap[record.status]">
+                  {{ statusTextMap[record.status] }}
+                </a-tag>
+              </template>
+              <template #actions="{ record }">
+                <a-space>
+                  <a-button type="text" @click="viewArticle(record)" :title="record.id">
+                    <template #icon><icon-eye /></template>
+                  </a-button>
+                  <a-button type="text" status="danger" @click="deleteArticle(record.id)">
+                    <template #icon><icon-delete /></template>
+                  </a-button>
+                </a-space>
+              </template>
+            </a-table>
+
+            <a-modal v-model:visible="refreshModalVisible" title="刷新设置">
+              <a-form :model="refreshForm" :rules="refreshRules">
+                <a-form-item label="起始页" field="startPage">
+                  <a-input-number v-model="refreshForm.startPage" :min="1" />
+                </a-form-item>
+                <a-form-item label="结束页" field="endPage">
+                  <a-input-number v-model="refreshForm.endPage" :min="1" />
+                </a-form-item>
+              </a-form>
+              <template #footer>
+                <a-button @click="refreshModalVisible = false">取消</a-button>
+                <a-button type="primary" @click="handleRefresh">确定</a-button>
+              </template>
+            </a-modal>
+            <a-modal id="article-model" v-model:visible="articleModalVisible"
+              placement="left" :footer="false" :fullscreen="false" @before-close="resetScrollPosition">
+              <h2 id="topreader">{{ currentArticle.title }}</h2>
+              <div style="margin-top: 20px; color: var(--color-text-3); text-align: left">
+                <a-link :href="currentArticle.url" target="_blank">查看原文</a-link>
+                更新时间 ：{{ currentArticle.time }}
+              <a-link @click="viewArticle(currentArticle,-1)" target="_blank">上一篇 </a-link>
+              <a-space/>
+              <a-link @click="viewArticle(currentArticle,1)" target="_blank">下一篇 </a-link>
+              </div>
+              <div v-html="currentArticle.content"></div>
+
+              <div style="margin-top: 20px; color: var(--color-text-3); text-align: right">
+                {{ currentArticle.time }}
+              </div>
+            </a-modal>
+          </a-card>
+        </a-layout-content>
+
+        <!-- 页脚放到内层布局里，位于 Content 之后 -->
+        <a-layout-footer class="page-footer">
+          <div class="login-footer">
+            <div class="footer-copyright-text">
+              Copyright © 2025 中山星火科技教育有限公司. All rights reserved.<br>
+              Based on original design by &nbsp;
+              <a href="https://github.com/rachelos" target="_blank" rel="noopener noreferrer">Rachel</a>
+              &nbsp; . Development and branching by &nbsp;
+              <a href="https://github.com/EricZhou05" target="_blank" rel="noopener noreferrer">EricZhou</a>
+              &nbsp; .
             </div>
-          </a-modal>
-        </a-card>
-      </a-layout-content>
+          </div>
+        </a-layout-footer>
+      </a-layout>
     </a-layout>
   </a-spin>
 </template>
@@ -242,7 +260,7 @@
 <script setup lang="ts">
 import { Avatar } from '@/utils/constants'
 import { ref, onMounted, h, computed } from 'vue' // [新增] computed
-import { IconDelete, IconEye, IconRefresh, IconScan, IconWifi, IconDownload, IconTags } from '@arco-design/web-vue/es/icon' // [新增] IconTags, IconDownload
+import { IconDelete, IconEye, IconRefresh, IconScan, IconWifi, IconDownload, IconTags, IconPlus, IconExport, IconImport, IconShareExternal, IconDown } from '@arco-design/web-vue/es/icon' // [新增] IconTags, IconDownload
 import { getArticles, deleteArticle as deleteArticleApi, ClearArticle, ClearDuplicateArticle, getArticleDetail } from '@/api/article'
 import { ExportOPML, ExportMPS, ImportMPS } from '@/api/export';
 import { exportArticlesAsDocx } from '@/api/exporter'; // [确认] 导入 exportArticlesAsDocx
@@ -802,8 +820,16 @@ const deleteMp = async (mpId: string) => {
 
 <style scoped>
 .article-list {
-  /* height: calc(100vh - 186px); */
+  min-height: 100vh; /* 确保外层布局至少占满视口高度 */
 }
+
+/* 右侧主列：纵向布局 */
+.main-column {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .a-layout-sider {
   overflow: hidden;
 }
@@ -845,6 +871,86 @@ const deleteMp = async (mpId: string) => {
   transform: rotate(180deg);
 }
 
+
+/* 关键：占满剩余高度，把 Footer 推到底部 */
+.page-footer {
+  margin-top: auto; /* 关键：让页脚推到底部 */
+  text-align: center;
+  padding: 20px;
+  color: var(--color-text-3); /* 使用 Arco Design 默认的次要文本颜色 */
+  background-color: transparent;
+}
+/* [修改] 用户提供的页脚CSS，调整链接颜色以适应主题 */
+.login-footer a {
+  color: var(--color-text-3); /* 使用 Arco Design 默认的次要文本颜色，避免白色看不清 */
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0; /* 移除内边距以确保基线对齐 */
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: baseline; /* 使内部flex项目（图标和文本）按基线对齐 */
+  gap: 6px;
+  vertical-align: baseline; /* 明确指定inline-flex容器自身的基线对齐 */
+}
+
+.login-footer a:hover {
+  color: var(--color-text-1); /* 鼠标悬停时使用主要文本颜色 */
+  background: rgba(66, 153, 225, 0.1);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+.footer-copyright-text {
+  color: var(--color-text-3); /* 使用 Arco Design 默认的次要文本颜色 */
+  font-size: 0.875rem; /* 保持原来的字体大小 (14px) */
+  font-weight: 500;    /* 保持原来的字重 */
+  line-height: 2.2;    /* 关键：拉大行距。您可以根据需要调整这个数值，例如 1.6 或 2.0 */
+  text-align: center;  /* 如果您希望这两行文本居中对齐，可以加上这句 */
+}
+
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.divider {
+  user-select: none;
+}
+
+
+.login-footer a:active {
+  transform: translateY(0);
+}
+
+.login-footer a::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  vertical-align: middle; /* 调整图标的垂直对齐，使其在视觉上与文本居中 */
+}
+/* SVG图标颜色调整为适应主题 */
+.login-footer a[href*="github"]::before {
+  /* 使用 var(--color-text-3) 或其他合适的变量替换 #ffffff */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E");
+}
+
+.login-footer a[href*="gitee"]::before {
+  /* 使用 var(--color-text-3) 或其他合适的变量替换 #ffffff */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M11.984 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.016 0zm6.09 5.333c.328 0 .593.266.592.593v1.482a.594.594 0 0 1-.593.592H9.777c-.982 0-1.778.796-1.778 1.778v5.63c0 .327.266.592.593.592h5.63c.982 0 1.778-.796 1.778-1.778v-.296a.593.593 0 0 0-.592-.593h-4.15a.592.592 0 0 1-.592-.592v-1.482a.593.593 0 0 1 .593-.592h6.815c.327 0 .593.265.593.592v3.408a4 4 0 0 1-4 4H5.926a.593.593 0 0 1-.593-.593V9.778a4.444 4.444 0 0 1 4.445-4.444h8.296z'/%3E%3C/svg%3E");
+}
+
+.login-footer a[href*="docs"]::before {
+  /* 使用 var(--color-text-3) 或其他合适的变量替换 #ffffff */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 4h7v5h5v11H6V4zm8 18v-1h4v1h-4zm-3 0v-1h1v1h-1zm-2 0v-1h1v1h-1zm-2 0v-1h1v1H7z'/%3E%3C/svg%3E");
+}
 </style>
 <style>
 #article-model img {
